@@ -1,0 +1,96 @@
+syntax = "proto3";
+option go_package = "grpc-server/proto";
+package sistema;
+
+// =======================
+// Mensajes comunes
+// =======================
+
+message Pirata {
+  string id = 1;
+  string nombre = 2;
+  int32 recompensa = 3;
+  string peligrosidad = 4; // "bajo", "medio", "alto"
+  string estado = 5;       // "buscado", "capturado", "entregado", "perdido"
+}
+
+message ListaPiratas {
+  repeated Pirata piratas = 1;
+}
+
+message ResultadoOperacion {
+  bool exito = 1;
+  string mensaje = 2;
+}
+
+message EstadoGlobalResponse {
+  int32 marinaCounter = 1;
+  int32 submundoCounter = 2;
+}
+
+// =======================
+// Gobierno Mundial
+// =======================
+
+service GobiernoService {
+  rpc ObtenerListaPiratas(Empty) returns (ListaPiratas);
+  rpc ConfirmarEntrega(ConfirmarEntregaRequest) returns (ResultadoOperacion); // Nueva función
+  rpc ConsultarReputacion(ReputacionRequest) returns (ReputacionResponse); // Nueva función
+  rpc ObtenerEstadoGlobal(Empty) returns (EstadoGlobalResponse);
+  rpc ReporteDeEstado(EstadoRequest) returns (ResultadoOperacion);
+}
+
+message Empty {}
+
+message CapturaRequest {
+  string idCazarrecompensas = 1;
+  Pirata pirata = 2;
+}
+message ConfirmarEntregaRequest {
+  string idCazarrecompensas = 1;
+  Pirata pirata = 2;
+  string destino = 3; // "Marina" o "Submundo"
+}
+
+message ReputacionRequest {
+  string idCazarrecompensas = 1;
+}
+
+message ReputacionResponse {
+  int32 reputacion = 1;
+  int32 entregasMarina = 2;   // Número de entregas a la Marina
+  int32 entregasSubmundo = 3; // Número de entregas al Submundo
+}
+
+message EstadoRequest {
+  string idCazarrecompensas = 1; // ID del cazarrecompensas que reporta
+  Pirata pirata = 2;             // Información del pirata
+  string nuevoEstado = 3;        // Nuevo estado del pirata
+}
+
+// =======================
+// Marina
+// =======================
+
+service MarinaService {
+  rpc EntregarPirataMarina(EntregaRequest) returns (ResultadoOperacion);
+  rpc AlertaTraficoIlegal(Empty) returns (ResultadoOperacion); // Nueva función
+}
+
+message EntregaRequest {
+  string idCazarrecompensas = 1;
+  Pirata pirata = 2;
+}
+
+// =======================
+// Submundo
+// =======================
+
+service SubmundoService {
+  rpc EntregarPirataSubmundo(VentaRequest) returns (ResultadoOperacion);
+}
+
+message VentaRequest {
+  string idCazarrecompensas = 1;
+  Pirata pirata = 2;
+}

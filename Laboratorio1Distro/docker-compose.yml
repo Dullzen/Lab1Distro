@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  cazarrecompenzas:
+    build:
+      context: ./cazarrecompenzas
+      dockerfile: Dockerfile
+    container_name: cazarrecompenzas
+
+  gobierno:
+    build:
+      context: ./gobierno
+      dockerfile: Dockerfile
+    container_name: gobierno
+    ports:
+      - "50051:50051"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:50051"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  marina:
+    build:
+      context: ./marina
+      dockerfile: Dockerfile
+    container_name: marina
+    ports:
+      - "50052:50052"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:50052"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  submundo:
+    build:
+      context: ./submundo
+      dockerfile: Dockerfile
+    container_name: submundo
+    ports:
+      - "50053:50053"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:50053"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
