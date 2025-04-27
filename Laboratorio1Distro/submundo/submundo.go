@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"math/rand"
 	"net"
@@ -51,9 +52,26 @@ func (s *server) EntregarPirataSubmundo(ctx context.Context, req *pb.VentaReques
 	}, nil
 }
 
+func conectarGRPC(address string, maxRetries int, retryDelay time.Duration) (*grpc.ClientConn, error) {
+	var conn *grpc.ClientConn
+	var err error
+
+	for i := 0; i < maxRetries; i++ {
+		conn, err = grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(3*time.Second))
+		if err == nil {
+			return conn, nil // Conexión exitosa
+		}
+
+		log.Printf("Intento %d: No se pudo conectar a %s: %v", i+1, address, err)
+		time.Sleep(retryDelay) // Esperar antes de reintentar
+	}
+
+	return nil, fmt.Errorf("no se pudo conectar a %s después de %d intentos", address, maxRetries)
+}
+
 func main() {
-	// Conectar al servicio Gobierno
-	connGob, err := grpc.Dial("10.35.168.64:50051", grpc.WithInsecure())
+	// Conectar al servicio Gobierno con intentos y timeout
+	connGob, err := conectarGRPC("10.35.168.64:50051", 5, 2*time.Second)
 	if err != nil {
 		log.Fatalf("No se pudo conectar al servicio Gobierno: %v", err)
 	}

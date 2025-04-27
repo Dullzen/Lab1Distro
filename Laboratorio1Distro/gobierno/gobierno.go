@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"encoding/csv"
+	"fmt"
 	"log"
 	"net"
 	"os"
 	"strconv"
+	"time"
 
 	pb "gobierno/proto/grpc-server/proto"
 
@@ -210,6 +212,23 @@ func cargarPiratasDesdeCSV(nombreArchivo string) ([]*pb.Pirata, error) {
 	return piratas, nil
 }
 
+func conectarGRPC(address string, maxRetries int, retryDelay time.Duration) (*grpc.ClientConn, error) {
+	var conn *grpc.ClientConn
+	var err error
+
+	for i := 0; i < maxRetries; i++ {
+		conn, err = grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(3*time.Second))
+		if err == nil {
+			return conn, nil // Conexión exitosa
+		}
+
+		log.Printf("Intento %d: No se pudo conectar a %s: %v", i+1, address, err)
+		time.Sleep(retryDelay) // Esperar antes de reintentar
+	}
+
+	return nil, fmt.Errorf("no se pudo conectar a %s después de %d intentos", address, maxRetries)
+}
+
 func main() {
 	// Cargar la lista de piratas al iniciar el servidor
 	piratas, err := cargarPiratasDesdeCSV("piratas.csv")
@@ -217,8 +236,8 @@ func main() {
 		log.Fatalf("Error al cargar piratas desde el archivo CSV: %v", err)
 	}
 
-	// Conectar al servicio Marina
-	connMarina, err := grpc.Dial("10.35.168.65:50052", grpc.WithInsecure())
+	// Conectar al servicio Marina con intentos y timeout
+	connMarina, err := conectarGRPC("10.35.168.65:50052", 5, 2*time.Second)
 	if err != nil {
 		log.Fatalf("No se pudo conectar al servicio Marina: %v", err)
 	}
