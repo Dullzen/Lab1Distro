@@ -236,15 +236,6 @@ func main() {
 		log.Fatalf("Error al cargar piratas desde el archivo CSV: %v", err)
 	}
 
-	// Conectar al servicio Marina con intentos y timeout
-	connMarina, err := conectarGRPC("10.35.168.65:50052", 5, 2*time.Second)
-	if err != nil {
-		log.Fatalf("No se pudo conectar al servicio Marina: %v", err)
-	}
-	defer connMarina.Close()
-
-	marinaClient := pb.NewMarinaServiceClient(connMarina)
-
 	// Crear el servidor con la lista de piratas cargada y un mapa vacío de cazarrecompensas
 	s := &server{
 		piratas:          piratas,
@@ -252,17 +243,34 @@ func main() {
 		submundoCounter:  0,
 		marinaCounter:    0,
 		FlujoIlegalAlto:  false,
-		marinaClient:     marinaClient,
 	}
 
+	// Iniciar el servidor gRPC
 	lis, err := net.Listen("tcp", ":50051")
 	if err != nil {
 		log.Fatalf("Fallo al escuchar: %v", err)
 	}
 	grpcServer := grpc.NewServer()
 	pb.RegisterGobiernoServiceServer(grpcServer, s)
-	log.Println("Gobierno corriendo en puerto 50051")
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("Fallo al iniciar servidor: %v", err)
+
+	// Iniciar el servidor en un goroutine para que no bloquee
+	go func() {
+		log.Println("Gobierno corriendo en puerto 50051")
+		if err := grpcServer.Serve(lis); err != nil {
+			log.Fatalf("Fallo al iniciar servidor: %v", err)
+		}
+	}()
+
+	// Conectar al servicio Marina con intentos y timeout
+	connMarina, err := conectarGRPC("10.35.168.65:50052", 5, 2*time.Second)
+	if err != nil {
+		log.Fatalf("No se pudo conectar al servicio Marina: %v", err)
 	}
+	defer connMarina.Close()
+
+	// Crear el cliente para Marina
+	s.marinaClient = pb.NewMarinaServiceClient(connMarina)
+
+	// Bloquear el programa para que no termine
+	select {}
 }

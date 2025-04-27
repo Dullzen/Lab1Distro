@@ -127,6 +127,28 @@ func conectarGRPC(address string, maxRetries int, retryDelay time.Duration) (*gr
 }
 
 func main() {
+	// Crear el servidor
+	s := &server{
+		piratasEntregados: make(map[string]bool),
+		factor:            1.0,
+	}
+
+	// Iniciar el servidor gRPC
+	lis, err := net.Listen("tcp", ":50052")
+	if err != nil {
+		log.Fatalf("Fallo al escuchar: %v", err)
+	}
+	grpcServer := grpc.NewServer()
+	pb.RegisterMarinaServiceServer(grpcServer, s)
+
+	// Iniciar el servidor en un goroutine para que no bloquee
+	go func() {
+		log.Println("Marina corriendo en puerto 50052")
+		if err := grpcServer.Serve(lis); err != nil {
+			log.Fatalf("Fallo al iniciar servidor: %v", err)
+		}
+	}()
+
 	// Conectar al servicio Gobierno con intentos y timeout
 	connGob, err := conectarGRPC("10.35.168.64:50051", 5, 2*time.Second)
 	if err != nil {
@@ -134,19 +156,8 @@ func main() {
 	}
 	defer connGob.Close()
 
-	gobiernoClient := pb.NewGobiernoServiceClient(connGob)
-
-	lis, err := net.Listen("tcp", ":50052")
-	if err != nil {
-		log.Fatalf("Fallo al escuchar: %v", err)
-	}
-
-	// Crear el servidor
-	s := &server{
-		gobiernoClient:    gobiernoClient,
-		piratasEntregados: make(map[string]bool),
-		factor:            1.0,
-	}
+	// Asignar el cliente de Gobierno al servidor
+	s.gobiernoClient = pb.NewGobiernoServiceClient(connGob)
 
 	// Rutina que verifica el porcentaje de piratas "Buscado"
 	go func() {
@@ -180,18 +191,13 @@ func main() {
 			if porcentajeBuscados < 20 {
 				s.factor = 0.6 // Reducir la recompensa en un 30%
 			} else if porcentajeBuscados < 40 {
-				s.factor = 0.8 // Reducir la recompensa en un 30%
+				s.factor = 0.8 // Reducir la recompensa en un 20%
 			} else {
 				s.factor = 1.0 // No aplicar reducción
 			}
 		}
 	}()
 
-	// Iniciar el servidor gRPC
-	grpcServer := grpc.NewServer()
-	pb.RegisterMarinaServiceServer(grpcServer, s)
-	log.Println("Marina corriendo en puerto 50052")
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("Fallo al iniciar servidor: %v", err)
-	}
+	// Bloquear el programa para que no termine
+	select {}
 }

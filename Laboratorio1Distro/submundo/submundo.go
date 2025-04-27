@@ -70,6 +70,24 @@ func conectarGRPC(address string, maxRetries int, retryDelay time.Duration) (*gr
 }
 
 func main() {
+	// Crear el servidor con el cliente para Gobierno (inicialmente vacío)
+	s := &server{}
+
+	// Iniciar el servidor gRPC en una goroutine
+	go func() {
+		lis, err := net.Listen("tcp", ":50053")
+		if err != nil {
+			log.Fatalf("Fallo al escuchar: %v", err)
+		}
+		grpcServer := grpc.NewServer()
+		pb.RegisterSubmundoServiceServer(grpcServer, s)
+
+		log.Println("Submundo corriendo en puerto 50053")
+		if err := grpcServer.Serve(lis); err != nil {
+			log.Fatalf("Fallo al iniciar servidor: %v", err)
+		}
+	}()
+
 	// Conectar al servicio Gobierno con intentos y timeout
 	connGob, err := conectarGRPC("10.35.168.64:50051", 5, 2*time.Second)
 	if err != nil {
@@ -77,16 +95,9 @@ func main() {
 	}
 	defer connGob.Close()
 
-	gobiernoClient := pb.NewGobiernoServiceClient(connGob)
+	// Asignar el cliente de Gobierno al servidor
+	s.gobiernoClient = pb.NewGobiernoServiceClient(connGob)
 
-	lis, err := net.Listen("tcp", ":50053")
-	if err != nil {
-		log.Fatalf("Fallo al escuchar: %v", err)
-	}
-	s := grpc.NewServer()
-	pb.RegisterSubmundoServiceServer(s, &server{gobiernoClient: gobiernoClient})
-	log.Println("Submundo corriendo en puerto 50053")
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("Fallo al iniciar servidor: %v", err)
-	}
+	// Bloquear el programa para que no termine
+	select {}
 }
