@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/csv"
+	"fmt"
 	"log"
 	"math/rand"
 	"os"
@@ -218,7 +219,22 @@ func simularTransporte(ctx context.Context, gob pb.GobiernoServiceClient, cazarr
 
 	return true // El pirata no escapó
 }
+func conectarGRPC(address string, maxRetries int, retryDelay time.Duration) (*grpc.ClientConn, error) {
+	var conn *grpc.ClientConn
+	var err error
 
+	for i := 0; i < maxRetries; i++ {
+		conn, err = grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(3*time.Second))
+		if err == nil {
+			return conn, nil // Conexión exitosa
+		}
+
+		log.Printf("Intento %d: No se pudo conectar a %s: %v", i+1, address, err)
+		time.Sleep(retryDelay) // Esperar antes de reintentar
+	}
+
+	return nil, fmt.Errorf("no se pudo conectar a %s después de %d intentos", address, maxRetries)
+}
 func main() {
 	// Direcciones IP de las otras entidades
 	const (
@@ -235,21 +251,21 @@ func main() {
 	log.Printf("Cazarrecompensas cargados: %+v\n", cazarrecompensas)
 
 	// Conexión al servicio Gobierno
-	connGob, err := grpc.Dial(gobiernoAddress, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(3*time.Second))
+	connGob, err := conectarGRPC(gobiernoAddress, 5, 2*time.Second)
 	if err != nil {
 		log.Fatalf("No se pudo conectar al servicio Gobierno: %v", err)
 	}
 	defer connGob.Close()
 
 	// Conexión al servicio Marina
-	connMar, err := grpc.Dial(marinaAddress, grpc.WithInsecure())
+	connMar, err := conectarGRPC(marinaAddress, 5, 2*time.Second)
 	if err != nil {
 		log.Fatalf("No se pudo conectar al servicio Marina: %v", err)
 	}
 	defer connMar.Close()
 
 	// Conexión al servicio Submundo
-	connSub, err := grpc.Dial(submundoAddress, grpc.WithInsecure())
+	connSub, err := conectarGRPC(submundoAddress, 5, 2*time.Second)
 	if err != nil {
 		log.Fatalf("No se pudo conectar al servicio Submundo: %v", err)
 	}
