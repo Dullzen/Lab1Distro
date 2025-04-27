@@ -1,6 +1,6 @@
 module gobierno
 
-go 1.18
+go 1.23
 
 require (
 	google.golang.org/grpc v1.71.1

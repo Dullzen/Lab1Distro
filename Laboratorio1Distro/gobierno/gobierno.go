@@ -218,7 +218,7 @@ func main() {
 	}
 
 	// Conectar al servicio Marina
-	connMarina, err := grpc.Dial("marina:50052", grpc.WithInsecure())
+	connMarina, err := grpc.Dial("10.35.168.65:50052", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("No se pudo conectar al servicio Marina: %v", err)
 	}
@@ -243,8 +243,6 @@ func main() {
 	grpcServer := grpc.NewServer()
 	pb.RegisterGobiernoServiceServer(grpcServer, s)
 	log.Println("Gobierno corriendo en puerto 50051")
-	log.Println(" ")
-	log.Println(" ")
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Fallo al iniciar servidor: %v", err)
 	}

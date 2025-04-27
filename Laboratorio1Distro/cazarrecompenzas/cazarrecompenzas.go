@@ -220,6 +220,13 @@ func simularTransporte(ctx context.Context, gob pb.GobiernoServiceClient, cazarr
 }
 
 func main() {
+	// Direcciones IP de las otras entidades
+	const (
+		gobiernoAddress = "10.35.168.64:50051" // IP de la VM de gobierno
+		marinaAddress   = "10.35.168.65:50052" // IP de la VM de marina
+		submundoAddress = "10.35.168.66:50053" // IP de la VM de submundo
+	)
+
 	// Leer cazarrecompensas desde el archivo CSV
 	cazarrecompensas, err := leerCazarrecompensasDesdeCSV("cazarrecompenzas.csv")
 	if err != nil {
@@ -227,18 +234,28 @@ func main() {
 	}
 	log.Printf("Cazarrecompensas cargados: %+v\n", cazarrecompensas)
 
-	connGob, err := grpc.Dial("gobierno:50051", grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(3*time.Second))
+	// Conexión al servicio Gobierno
+	connGob, err := grpc.Dial(gobiernoAddress, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(3*time.Second))
 	if err != nil {
 		log.Fatalf("No se pudo conectar al servicio Gobierno: %v", err)
 	}
 	defer connGob.Close()
 
-	connMar, _ := grpc.Dial("marina:50052", grpc.WithInsecure())
-	connSub, _ := grpc.Dial("submundo:50053", grpc.WithInsecure())
-
+	// Conexión al servicio Marina
+	connMar, err := grpc.Dial(marinaAddress, grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("No se pudo conectar al servicio Marina: %v", err)
+	}
 	defer connMar.Close()
+
+	// Conexión al servicio Submundo
+	connSub, err := grpc.Dial(submundoAddress, grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("No se pudo conectar al servicio Submundo: %v", err)
+	}
 	defer connSub.Close()
 
+	// Crear clientes para los servicios
 	gob := pb.NewGobiernoServiceClient(connGob)
 	mar := pb.NewMarinaServiceClient(connMar)
 	sub := pb.NewSubmundoServiceClient(connSub)

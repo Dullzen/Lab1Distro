@@ -110,13 +110,13 @@ func (s *server) AlertaTraficoIlegal(ctx context.Context, req *pb.Empty) (*pb.Re
 
 func main() {
 	// Conectar al servicio Gobierno
-	connGob, err := grpc.Dial("gobierno:50051", grpc.WithInsecure())
+	connGob, err := grpc.Dial("10.35.168.64:50051", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("No se pudo conectar al servicio Gobierno: %v", err)
 	}
 	defer connGob.Close()
 
-	gobiernoClient := pb.NewGobiernoServiceClient(connGob) // Crear cliente usando el mismo paquete
+	gobiernoClient := pb.NewGobiernoServiceClient(connGob)
 
 	lis, err := net.Listen("tcp", ":50052")
 	if err != nil {
@@ -126,8 +126,8 @@ func main() {
 	// Crear el servidor
 	s := &server{
 		gobiernoClient:    gobiernoClient,
-		piratasEntregados: make(map[string]bool), // Inicializar el mapa
-		factor:            1.0,                   // Inicialmente no hay reducción
+		piratasEntregados: make(map[string]bool),
+		factor:            1.0,
 	}
 
 	// Rutina que verifica el porcentaje de piratas "Buscado"

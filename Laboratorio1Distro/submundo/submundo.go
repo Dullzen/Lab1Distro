@@ -53,7 +53,7 @@ func (s *server) EntregarPirataSubmundo(ctx context.Context, req *pb.VentaReques
 
 func main() {
 	// Conectar al servicio Gobierno
-	connGob, err := grpc.Dial("gobierno:50051", grpc.WithInsecure())
+	connGob, err := grpc.Dial("10.35.168.64:50051", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("No se pudo conectar al servicio Gobierno: %v", err)
 	}
